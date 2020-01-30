@@ -22,9 +22,10 @@ elif [ -n "${DISPLAY-}" ] && is_app_installed xsel; then
   copy_backend="xsel -i --clipboard"
 elif [ -n "${DISPLAY-}" ] && is_app_installed xclip; then
   copy_backend="xclip -i -f -selection primary | xclip -i -selection clipboard"
-elif [ -n "${copy_backend_remote_tunnel_port-}" ] \
-    && (netstat -f inet -nl 2>/dev/null || netstat -4 -nl 2>/dev/null) \
-      | grep -q "[.:]$copy_backend_remote_tunnel_port"; then
+# Check if ss installed, as there is no native ss on FreeBSD (use sockstat instead)
+elif [ -n "${copy_backend_remote_tunnel_port-}" ] && is_app_installed ss && [ "$(ss -n -4 state listening "( sport = $copy_backend_remote_tunnel_port )" | tail -n +2 | wc -l)" -eq 1 ]; then
+  copy_backend="nc localhost $copy_backend_remote_tunnel_port"
+elif [ -n "${copy_backend_remote_tunnel_port-}" ] && is_app_installed sockstat && sockstat -4 -l | grep -q ":$copy_backend_remote_tunnel_port" ; then
   copy_backend="nc localhost $copy_backend_remote_tunnel_port"
 fi
 
